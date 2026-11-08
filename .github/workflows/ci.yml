@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Python 3.12 / tests and sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-lock.txt
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check dependency compatibility
+        run: python -m pip check
+      - name: Run numerical and failure-path tests
+        run: python -m unittest discover -s tests -v
+      - name: Run the included EEG sample
+        run: python process.py --data sample --out out/ci-smoke
+      - name: Keep smoke-test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-${{ github.sha }}
+          path: out/ci-smoke/
+          if-no-files-found: error
+          retention-days: 7

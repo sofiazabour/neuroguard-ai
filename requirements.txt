@@ -6,6 +6,7 @@
 #
 # Don't add habs-hack here: the platform runs your code itself, and the CLI is
 # installed separately by the workflow.
+-c requirements-lock.txt
 mne==1.13.2
 pyedflib==0.1.42
 numpy==2.4.6

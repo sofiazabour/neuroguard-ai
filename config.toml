@@ -1,0 +1,4 @@
+# Shared by python process.py and HABS process(data_dir, out_dir).
+dataset_variant = "CURATED"  # CURATED or PREPROCESSED
+max_recordings = 3          # Positive limit; keep small until timings are known.
+band_hz = [8.0, 12.0]       # Alpha band; a technical smoke test, not a diagnosis.

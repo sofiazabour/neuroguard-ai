@@ -1,5 +1,14 @@
 # Your local runs. Results that matter come back from `habs ls`, not from here.
 out/
 .venv/
+.venv-tools/
 __pycache__/
 *.pyc
+data/
+.env
+.env.*
+!.env.example
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/

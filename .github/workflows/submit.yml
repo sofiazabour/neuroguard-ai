@@ -14,13 +14,9 @@ permissions:
   id-token: write
 
 env:
-  # ─────────────────────────────────────────────────────────────────────
-  #  PASTE YOUR TEAM KEY HERE, between the quotes, replacing this line.
-  #  It is the one line HABS sent you, and it looks like this:
-  #       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  #  It is not a password. It only works from this repository, on main.
-  # ─────────────────────────────────────────────────────────────────────
-  HABS_KEY: "PASTE-YOUR-TEAM-KEY-HERE"
+  # Settings > Secrets and variables > Actions > Variables > HABS_KEY.
+  # This is the repository-bound client ID provided by HABS, not a password.
+  HABS_KEY: ${{ vars.HABS_KEY }}
 
   # The same for every team. Leave these alone.
   HABS_TENANT_ID: 6fc0e479-449c-4700-b89c-7c4848058e30
@@ -31,12 +27,12 @@ env:
 
 jobs:
   # Two jobs, not one, so that the two ways a run can fail look different.
-  # A red cross on "build" is your requirements.txt; a red cross on "run" is
-  # your code. Finding that out used to mean reading to the bottom of a log.
+  # Build checks the key, dependencies and local tests before submission;
+  # run follows execution on the GPU.
   build:
     name: build your image
     # The template itself has no key and no identity of its own.
-    if: github.repository != 'HABS-BRAIN/habs-hackathon-template'
+    if: github.repository != 'HABS-BRAIN/habs-hackathon-template' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -48,7 +44,7 @@ jobs:
         run: |
           case "$HABS_KEY" in
             ""|PASTE-YOUR-TEAM-KEY-HERE)
-              echo "::error title=No team key::Open .github/workflows/submit.yml and put the line HABS sent you on the HABS_KEY line."
+              echo "::error title=No team key::Add the HABS_KEY repository variable in Settings > Secrets and variables > Actions > Variables. See docs/SETUP.md."
               exit 1 ;;
           esac
 
@@ -64,6 +60,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+
+      - name: Verify code before GPU submission
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip check
+          python -m unittest discover -s tests -v
+          python process.py --data sample --out out/preflight
 
       - run: pip install --quiet "$HABS_CLIENT"
 
