@@ -76,6 +76,9 @@ for threshold in (150, 200, 300):
 
 print(f"\nTableau enregistré dans {output} (colonne alert à {THRESHOLD_UV:g} µV)")
 
+
+
+
 # Baseline observation on P001 (Fp1, 500 ms windows):
 # Raising the threshold from 150 to 300 µV reduced alerts during annotated
 # rest periods from 53/238 to 11/238. It also reduced alerts during the blink
