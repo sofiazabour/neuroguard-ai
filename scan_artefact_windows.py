@@ -51,9 +51,9 @@ for first in range(0, len(fp1_uv) - samples_per_window + 1, samples_per_window):
 windows = pd.DataFrame(rows)
 
 # Save the CSV with rounded amplitudes. Threshold comparisons use full precision.
-output = Path("out/fp1-windows.csv")
-output.parent.mkdir(exist_ok=True)
-windows.round({"peak_to_peak_uv": 2}).to_csv(output, index=False)
+# output = Path("out/fp1-windows.csv")
+# output.parent.mkdir(exist_ok=True)
+# windows.round({"peak_to_peak_uv": 2}).to_csv(output, index=False)
 
 # Select windows fully inside either of P001's two eyes-open rest periods.
 at_rest = (
@@ -74,7 +74,7 @@ for threshold in (150, 200, 300):
         f"repos : {(alerts & at_rest).sum()}/{at_rest.sum()}"
     )
 
-print(f"\nTableau enregistré dans {output} (colonne alert à {THRESHOLD_UV:g} µV)")
+# print(f"\nTableau enregistré dans {output} (colonne alert à {THRESHOLD_UV:g} µV)")
 
 
 
@@ -121,4 +121,47 @@ for first in range(first_sample, last_sample, samples_per_window):
         f"{first / sample_rate:5.1f}–{stop / sample_rate:5.1f} s | "
         f"{amplitude_uv:6.1f} µV | {status}",
         flush=True,
+    )
+    
+    
+# Find the eyes-open rest periods in the artefact recording.
+origin_s = segment["metadata_time_origin_s"]
+rest_periods = sorted(
+    (event["onset_s"] - origin_s, event["duration_s"])
+    for event in metadata["events"]
+    if event["marker_id"] == 10000
+    and event["duration_s"] is not None
+    and event["duration_s"] > 0
+    and 0 <= event["onset_s"] - origin_s < segment["duration_s"]
+)
+
+rest_start_s, rest_duration_s = rest_periods[0]
+calibration_end_s = rest_start_s + min(30.0, rest_duration_s)
+
+starts = windows["start_s"]
+ends = windows["end_s"]
+amplitudes = windows["peak_to_peak_uv"]
+
+# Set the threshold to the 95th percentile of the calibration windows.
+calibration = (starts >= rest_start_s) & (ends <= calibration_end_s)
+if not calibration.any():
+    raise ValueError("No complete rest window for calibration.")
+calibrated_threshold_uv = amplitudes[calibration].quantile(0.95)
+
+# Compare both rules on the same windows after calibration.
+at_rest = pd.Series(False, index=windows.index)
+for start_s, duration_s in rest_periods:
+    at_rest |= (starts >= start_s) & (ends <= start_s + duration_s)
+
+after_calibration = starts >= calibration_end_s
+test_rest = at_rest & after_calibration
+test_blink = windows["inside_blink_instruction"] & after_calibration
+
+print(f"\nCalibration : {calibration.sum()} fenêtres")
+for label, threshold in [("Fixe", 200.0), ("Calibré", calibrated_threshold_uv)]:
+    alerts = amplitudes >= threshold
+    print(
+        f"{label} ({threshold:.1f} µV) | "
+        f"repos : {(alerts & test_rest).sum()}/{test_rest.sum()} | "
+        f"consigne : {(alerts & test_blink).sum()}/{test_blink.sum()}"
     )
