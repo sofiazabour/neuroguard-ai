@@ -88,3 +88,29 @@ Le dépôt ne contient pas encore de métriques de prédiction.
 Les données téléchargées, sorties et fichiers `.env` sont ignorés par Git.
 Les dépendances directes et transitives du pipeline sont épinglées dans
 `requirements.txt` et `requirements-lock.txt` pour Python 3.12.
+
+## NeuroGuard artifact-type prototype (November 2026)
+
+The active `process.py` is an **exploratory multi-type artifact candidate detector**.
+The former alpha-band smoke test is preserved as `process_alpha_baseline.py`.
+The previous Fp1-only prototypes are preserved for comparison.
+
+```bash
+python process.py --data data --out out/neuroguard_run
+python -m pytest tests/test_neuroguard_detector.py -q
+```
+
+The data directory must contain `CURATED/Pxxx/*_task-artefact_*.bdf` and
+`Pxxx_day-1_metadata.json`. Outputs: `artifact_windows.csv`,
+`calibration.csv`, `task_interval_summary.csv`, and `run.json`.
+
+**Important:** These are provisional ocular/muscle/movement *candidate* rules,
+not validated artifact labels. Experimental task intervals are not event-level
+ground truth. Do not report task-interval classification as clinical sensitivity.
+The pipeline currently processes the first three recordings and is an **offline
+window replay**, not yet a wall-clock-paced real-time streaming implementation.
+The previous `tests/test_process.py` tests the former alpha baseline and needs
+migration; run `tests/test_neuroguard_detector.py` for the new detector.
+
+Next: validate individual events, establish subject-held-out performance,
+benchmark real-time replay and update CI and submission checks.
